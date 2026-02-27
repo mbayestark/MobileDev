@@ -1,0 +1,68 @@
+{
+    "weather": [
+        {
+            "id": 1,
+            "latitude": 14.6937,
+            "longitude": -17.4441,
+            "location": "Dakar, Senegal",
+            "current": {
+                "temperature": 27,
+                "weatherCode": 1,
+                "windSpeed": 18,
+                "humidity": 68,
+                "feelsLike": 29
+            },
+            "daily": [
+                {
+                    "date": "2026-02-27",
+                    "maxTemp": 28,
+                    "minTemp": 21,
+                    "weatherCode": 1,
+                    "precipitation": 0
+                },
+                {
+                    "date": "2026-02-28",
+                    "maxTemp": 29,
+                    "minTemp": 22,
+                    "weatherCode": 0,
+                    "precipitation": 0
+                },
+                {
+                    "date": "2026-03-01",
+                    "maxTemp": 30,
+                    "minTemp": 23,
+                    "weatherCode": 2,
+                    "precipitation": 0.2
+                },
+                {
+                    "date": "2026-03-02",
+                    "maxTemp": 28,
+                    "minTemp": 22,
+                    "weatherCode": 3,
+                    "precipitation": 1.5
+                },
+                {
+                    "date": "2026-03-03",
+                    "maxTemp": 27,
+                    "minTemp": 21,
+                    "weatherCode": 61,
+                    "precipitation": 4.0
+                },
+                {
+                    "date": "2026-03-04",
+                    "maxTemp": 26,
+                    "minTemp": 20,
+                    "weatherCode": 63,
+                    "precipitation": 8.2
+                },
+                {
+                    "date": "2026-03-05",
+                    "maxTemp": 28,
+                    "minTemp": 21,
+                    "weatherCode": 1,
+                    "precipitation": 0
+                }
+            ]
+        }
+    ]
+}
