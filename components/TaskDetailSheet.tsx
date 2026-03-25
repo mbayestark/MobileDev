@@ -9,6 +9,8 @@ import { updateTask, deleteTask } from '../lib/storage';
 import { Task } from '../lib/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { scheduleTaskNotification, cancelTaskNotification } from '../lib/notifications';
+import { setTimer, startTimer, pauseTimer, resetTimer, formatTime } from '../lib/timerStore';
+import { useTimer } from '../lib/useTimer';
 
 type Props = {
     task: Task | null;
@@ -26,9 +28,11 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
     const [dueDate, setDueDate] = useState<Date | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly'>('none');
-    const [dueTime,setDueTime]=useState<string|undefined>(undefined);
+    const [dueTime, setDueTime] = useState<string | undefined>(undefined);
     const [timePicker, setTimePicker] = useState(false);
     const [reminder, setReminder] = useState(false);
+    const timer = useTimer();
+    const isThisTask = timer.taskId === task?.id;
 
 
     useEffect(() => {
@@ -50,18 +54,18 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
         if (!task) return;
         let notificationId = task.notificationId;
 
-        if(notificationId){
+        if (notificationId) {
             await cancelTaskNotification(notificationId);
-            notificationId=undefined;
+            notificationId = undefined;
         }
-        if(reminder && dueDate && dueTime){
-            const id=await scheduleTaskNotification(
+        if (reminder && dueDate && dueTime) {
+            const id = await scheduleTaskNotification(
                 task.id,
                 title,
                 dueDate.toISOString().split('T')[0],
                 dueTime
             );
-            notificationId=id||undefined;
+            notificationId = id || undefined;
         }
         await updateTask({
             ...task,
@@ -85,6 +89,11 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
         onClose();
     };
 
+    const handleSetDuration = (minutes: number) => {
+        if (!task) return;
+        setTimer(task.id, task.title, minutes * 60);
+    };
+
     const s = styles(theme);
 
     if (!task) return null;
@@ -101,21 +110,16 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
             <View style={s.sheet}>
                 <ScrollView showsVerticalScrollIndicator={false}>
 
-                    {/* Drag Handle */}
-                    <View style={s.handle} />
 
-                    {/* Header */}
                     <View style={s.sheetHeader}>
                         <TouchableOpacity onPress={onClose}>
                             <Text style={{ color: theme.textDim, fontSize: 15 }}>Cancel</Text>
                         </TouchableOpacity>
-                        <View style={s.handle} />
                         <TouchableOpacity onPress={handleSave}>
                             <Text style={{ color: theme.accent, fontSize: 15, fontWeight: '600' }}>Save</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Title */}
                     <TextInput
                         style={s.titleInput}
                         value={title}
@@ -123,7 +127,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         multiline
                     />
 
-                    {/* My Day Toggle */}
                     <TouchableOpacity
                         style={[s.row, myDay && { backgroundColor: theme.amber + '22' }]}
                         onPress={() => { setMyDay(prev => !prev); }}
@@ -135,7 +138,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         {myDay && <Ionicons name="checkmark" size={16} color={theme.amber} />}
                     </TouchableOpacity>
 
-                    {/* Due Date */}
                     <TouchableOpacity
                         style={s.row}
                         onPress={() => setShowDatePicker(true)}
@@ -169,8 +171,7 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         </View>
                     )}
 
-                    {/* Due Time */}
-                    <TouchableOpacity style={s.row} onPress={()=>setTimePicker(true)}>    
+                    <TouchableOpacity style={s.row} onPress={() => setTimePicker(true)}>
                         <Ionicons name="time-outline" size={20} color={theme.textDim} />
                         <Text style={[s.rowText, { color: dueTime ? theme.text : theme.textDim }]}>
                             {dueTime || 'Add time'}
@@ -204,7 +205,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         </View>
                     )}
 
-                    {/* Reminder Toggle */}
                     <TouchableOpacity
                         style={[s.row, reminder && { backgroundColor: theme.blue + '22' }]}
                         onPress={() => setReminder(prev => !prev)}
@@ -216,7 +216,54 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         {reminder && <Ionicons name="checkmark" size={16} color={theme.blue} />}
                     </TouchableOpacity>
 
-                    {/* Priority */}
+                    <View style={s.timerSection}>
+                        <View style={s.timerHeader}>
+                            <Ionicons name="timer-outline" size={20} color={theme.textDim} />
+                            <Text style={s.rowLabel}>Focus Timer</Text>
+                        </View>
+
+                        <View style={s.timerPresets}>
+                            {[0.2, 1, 5, 15, 25, 45, 60].map(min => (
+                                <TouchableOpacity
+                                    key={min}
+                                    style={[
+                                        s.presetBtn,
+                                        isThisTask && timer.duration === min * 60 && { backgroundColor: theme.accent }
+                                    ]}
+                                    onPress={() => handleSetDuration(min)}
+                                >
+                                    <Text style={[
+                                        s.presetText,
+                                        isThisTask && timer.duration === min * 60 && { color: '#fff' }
+                                    ]}>
+                                        {min}m
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {isThisTask && (
+                            <View style={s.timerDisplay}>
+                                <Text style={s.timerText}>{formatTime(timer.remaining)}</Text>
+                                <View style={s.timerControls}>
+                                    <TouchableOpacity
+                                        style={s.timerBtn}
+                                        onPress={timer.running ? pauseTimer : startTimer}
+                                    >
+                                        <Ionicons
+                                            name={timer.running ? 'pause' : 'play'}
+                                            size={20}
+                                            color={theme.accent}
+                                        />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={s.timerBtn} onPress={resetTimer}>
+                                        <Ionicons name="refresh" size={20} color={theme.textDim} />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                    </View>
+
                     <View style={s.row}>
                         <Ionicons name="flag-outline" size={20} color={theme.textDim} />
                         <Text style={s.rowLabel}>Priority</Text>
@@ -235,7 +282,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         </View>
                     </View>
 
-                    {/* Repeat */}
                     <View style={s.row}>
                         <Ionicons name="repeat-outline" size={20} color={theme.textDim} />
                         <Text style={s.rowLabel}>Repeat</Text>
@@ -254,7 +300,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         </View>
                     </View>
 
-                    {/* Notes */}
                     <View style={s.notesContainer}>
                         <Ionicons name="document-text-outline" size={20} color={theme.textDim} />
                         <TextInput
@@ -267,7 +312,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                         />
                     </View>
 
-                    {/* Delete */}
                     <TouchableOpacity style={s.deleteBtn} onPress={handleDelete}>
                         <Ionicons name="trash-outline" size={18} color={theme.red} />
                         <Text style={[s.rowText, { color: theme.red }]}>Delete task</Text>
@@ -301,11 +345,11 @@ const styles = (theme: any) => StyleSheet.create({
         marginVertical: 12,
     },
     sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-},
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+    },
     titleInput: {
         fontSize: 20,
         fontWeight: '600',
@@ -333,6 +377,56 @@ const styles = (theme: any) => StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 6,
         backgroundColor: theme.surfaceAlt,
+    },
+    timerSection: {
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.border,
+        gap: 12,
+    },
+    timerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    timerPresets: {
+        flexDirection: 'row',
+        gap: 8,
+        flexWrap: 'wrap',
+    },
+    presetBtn: {
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: theme.surfaceAlt,
+    },
+    presetText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: theme.textDim,
+    },
+    timerDisplay: {
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 8,
+    },
+    timerText: {
+        fontSize: 48,
+        fontWeight: '700',
+        color: theme.text,
+        fontVariant: ['tabular-nums'],
+    },
+    timerControls: {
+        flexDirection: 'row',
+        gap: 24,
+    },
+    timerBtn: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: theme.surfaceAlt,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     priorityText: { fontSize: 11, fontWeight: '600', color: theme.textDim },
     notesContainer: {

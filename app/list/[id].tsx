@@ -6,6 +6,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { getTasks, addTask as saveTask, updateTask, deleteTask, getLists } from '../../lib/storage';
 import { Task, TaskList } from '../../lib/types';
 import TaskDetailSheet from '../../components/TaskDetailSheet';
+import { useTimer } from '../../lib/useTimer';
+import { formatTime } from '../../lib/timerStore';
 
 export default function TaskListScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,6 +20,7 @@ export default function TaskListScreen() {
     const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [sheetVisible, setSheetVisible] = useState(false);
+    const timer = useTimer();
 
     const loadData = async () => {
         if (!id) return;
@@ -25,7 +28,17 @@ export default function TaskListScreen() {
         const allLists = await getLists();
         const currentList = allLists.find(l => l.id === id) || null;
         setList(currentList);
-        setCompletedTasks(allTasks.filter(t => t.completed && t.listId === (id === 'tasks' || id === 'myday' || id === 'important' || id === 'planned' ? id : id)));
+        if (id === 'tasks') {
+            setCompletedTasks(allTasks.filter(t => t.completed));
+        } else if (id === 'myday') {
+            setCompletedTasks(allTasks.filter(t => t.completed && t.myDay));
+        } else if (id === 'important') {
+            setCompletedTasks(allTasks.filter(t => t.completed && t.priority === 'high'));
+        } else if (id === 'planned') {
+            setCompletedTasks(allTasks.filter(t => t.completed && t.dueDate));
+        } else {
+            setCompletedTasks(allTasks.filter(t => t.completed && t.listId === id));
+        }
 
         if (id === 'tasks') {
             setTasks(allTasks.filter(t => !t.completed));
@@ -50,7 +63,7 @@ export default function TaskListScreen() {
             title: newTask.trim(),
             completed: false,
             listId: id,
-            myDay: id === 'myDay',
+            myDay: id === 'myday',
             priority: id === 'important' ? 'high' : 'medium',
             dueDate: id === 'planned' ? new Date().toISOString().split('T')[0] : undefined,
             createdAt: new Date().toISOString(),
@@ -72,7 +85,6 @@ export default function TaskListScreen() {
         <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-            {/* Header */}
             <View style={s.header}>
                 <TouchableOpacity onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={26} color={theme.text} />
@@ -81,7 +93,6 @@ export default function TaskListScreen() {
                 <View style={{ width: 26 }} />
             </View>
 
-            {/* Tasks */}
             <FlatList
                 data={tasks}
                 keyExtractor={item => item.id}
@@ -103,6 +114,24 @@ export default function TaskListScreen() {
                             {item.completed && <Ionicons name="checkmark" size={14} color="#fff" />}
                         </TouchableOpacity>
                         <Text style={[s.taskTitle, item.completed && s.taskCompleted]}>{item.title}</Text>
+                        {timer.taskId === item.id && (
+                            <View style={[
+                                s.timerBadge,
+                                { backgroundColor: timer.running ? theme.accent : theme.surfaceAlt }
+                            ]}>
+                                <Ionicons
+                                    name={timer.running ? 'timer' : 'timer-outline'}
+                                    size={12}
+                                    color={timer.running ? '#fff' : theme.textDim}
+                                />
+                                <Text style={[
+                                    s.timerBadgeText,
+                                    { color: timer.running ? '#fff' : theme.textDim }
+                                ]}>
+                                    {formatTime(timer.remaining)}
+                                </Text>
+                            </View>
+                        )}
                         {item.priority === 'high' && <Ionicons name="star" size={14} color={theme.amber} />}
                     </TouchableOpacity>
                 )}
@@ -113,7 +142,7 @@ export default function TaskListScreen() {
                                 style={s.completedHeader}
                                 onPress={() => setShowCompleted(prev => !prev)}>
                                 <Ionicons name={showCompleted ? 'chevron-down' : 'chevron-up'} size={16} color={theme.textDim} />
-                                <Text style={s.completedText}>
+                                <Text style={s.taskCompleted}>
                                     {showCompleted ? `Hiding ${completedTasks.length} completed` : `Showing ${completedTasks.length} completed`}
                                 </Text>
                             </TouchableOpacity>
@@ -134,7 +163,6 @@ export default function TaskListScreen() {
                 }
             />
 
-            {/*Task Input*/}
             <View style={s.inputContainer}>
                 <Ionicons name="add-circle-outline" size={22} color={theme.accent} />
                 <TextInput
@@ -215,5 +243,17 @@ const styles = (theme: any) => StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: theme.textDim,
+    },
+    timerBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+    },
+    timerBadgeText: {
+        fontSize: 11,
+        fontWeight: '600',
     },
 });

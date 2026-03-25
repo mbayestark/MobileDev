@@ -1,5 +1,8 @@
+import * as Notifications from 'expo-notifications';
+
 type TimerState = {
     taskId: string | null;
+    taskTitle: string | null;
     duration: number;
     remaining: number;
     running: boolean;
@@ -8,6 +11,7 @@ type TimerState = {
 
 const state: TimerState = {
     taskId: null,
+    taskTitle: '',
     duration: 25 * 60,
     remaining: 25 * 60,
     running: false,
@@ -17,20 +21,26 @@ const state: TimerState = {
 let interval: ReturnType<typeof setInterval> | null = null;
 
 export function getTimerState() {
-    return { ...state, listeners: undefined };
+    return {
+        taskId: state.taskId,
+        duration: state.duration,
+        remaining: state.remaining,
+        running: state.running,
+    };
 }
 
-export function subscribeToTimer(fn: () => void) {
+export function subscribeToTimer(fn: () => void): () => void {
     state.listeners.add(fn);
-    return () => state.listeners.delete(fn);
+    return () => { state.listeners.delete(fn); };
 }
 
 function notify() {
     state.listeners.forEach(fn => fn());
 }
 
-export function setTimer(taskId: string, durationSeconds: number) {
+export function setTimer(taskId: string, taskTitle: string, durationSeconds: number) {
     state.taskId = taskId;
+    state.taskTitle = taskTitle;
     state.duration = durationSeconds;
     state.remaining = durationSeconds;
     state.running = false;
@@ -47,6 +57,14 @@ export function startTimer() {
             state.running = false;
             if (interval) clearInterval(interval);
             interval = null;
+            Notifications.scheduleNotificationAsync({
+                content: {
+                    title: '⏱ Timer Complete!',
+                    body: 'Your focus session for "' + state.taskTitle + '" is done. Take a break!',
+                    sound: true,
+                },
+                trigger: null,
+            });
         } else {
             state.remaining -= 1;
         }
