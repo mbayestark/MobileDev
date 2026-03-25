@@ -7,7 +7,7 @@ import { getTasks } from '../../lib/storage';
 import { Task } from '../../lib/types';
 
 export default function MyDayScreen() {
-    const { theme, isDark } = useTheme();
+    const { theme, isDark, toggleTheme } = useTheme();
     const router = useRouter();
     const [tasks, setTasks] = useState<Task[]>([]);
 
@@ -58,6 +58,10 @@ export default function MyDayScreen() {
                     loadData();
                 }}>
                     <Text style={{ color: 'red', fontSize: 12 }}>Reset</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={toggleTheme}>
+                    <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={22} color={theme.textDim} />
                 </TouchableOpacity>
             </View>
 
