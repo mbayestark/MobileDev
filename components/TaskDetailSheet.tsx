@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { updateTask, deleteTask } from '../lib/storage';
 import { Task } from '../lib/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { scheduleTaskNotification, cancelTaskNotification } from '../lib/notifications';
 
 type Props = {
     task: Task | null;
@@ -25,6 +26,10 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
     const [dueDate, setDueDate] = useState<Date | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly'>('none');
+    const [dueTime,setDueTime]=useState<string|undefined>(undefined);
+    const [timePicker, setTimePicker] = useState(false);
+    const [reminder, setReminder] = useState(false);
+
 
     useEffect(() => {
         if (task) {
@@ -34,11 +39,30 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
             setPriority(task.priority);
             setRepeat(task.repeat);
             setDueDate(task.dueDate ? new Date(task.dueDate) : null);
+            setDueTime(task.dueTime);
+            setReminder(!!task.notificationId);
         }
+        setShowDatePicker(false);
+        setTimePicker(false);
     }, [task]);
 
     const handleSave = async () => {
         if (!task) return;
+        let notificationId = task.notificationId;
+
+        if(notificationId){
+            await cancelTaskNotification(notificationId);
+            notificationId=undefined;
+        }
+        if(reminder && dueDate && dueTime){
+            const id=await scheduleTaskNotification(
+                task.id,
+                title,
+                dueDate.toISOString().split('T')[0],
+                dueTime
+            );
+            notificationId=id||undefined;
+        }
         await updateTask({
             ...task,
             title: title.trim() || task.title,
@@ -47,6 +71,8 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
             priority,
             repeat,
             dueDate: dueDate ? dueDate.toISOString().split('T')[0] : undefined,
+            dueTime,
+            notificationId,
         });
         onUpdate();
         onClose();
@@ -78,12 +104,22 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                     {/* Drag Handle */}
                     <View style={s.handle} />
 
+                    {/* Header */}
+                    <View style={s.sheetHeader}>
+                        <TouchableOpacity onPress={onClose}>
+                            <Text style={{ color: theme.textDim, fontSize: 15 }}>Cancel</Text>
+                        </TouchableOpacity>
+                        <View style={s.handle} />
+                        <TouchableOpacity onPress={handleSave}>
+                            <Text style={{ color: theme.accent, fontSize: 15, fontWeight: '600' }}>Save</Text>
+                        </TouchableOpacity>
+                    </View>
+
                     {/* Title */}
                     <TextInput
                         style={s.titleInput}
                         value={title}
                         onChangeText={setTitle}
-                        onBlur={handleSave}
                         multiline
                     />
 
@@ -114,18 +150,71 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                             </TouchableOpacity>
                         )}
                     </TouchableOpacity>
-
                     {showDatePicker && (
-                        <DateTimePicker
-                            value={dueDate || new Date()}
-                            mode="date"
-                            display="spinner"
-                            onChange={(event, date) => {
-                                setShowDatePicker(Platform.OS === 'ios');
-                                if (date) setDueDate(date);
-                            }}
-                        />
+                        <View>
+                            <TouchableOpacity
+                                style={{ alignItems: 'flex-end', paddingRight: 16, paddingVertical: 8 }}
+                                onPress={() => setShowDatePicker(false)}
+                            >
+                                <Text style={{ color: theme.accent, fontWeight: '600', fontSize: 16 }}>Done</Text>
+                            </TouchableOpacity>
+                            <DateTimePicker
+                                value={dueDate || new Date()}
+                                mode="date"
+                                display="spinner"
+                                onChange={(event, date) => {
+                                    if (date) setDueDate(date);
+                                }}
+                            />
+                        </View>
                     )}
+
+                    {/* Due Time */}
+                    <TouchableOpacity style={s.row} onPress={()=>setTimePicker(true)}>    
+                        <Ionicons name="time-outline" size={20} color={theme.textDim} />
+                        <Text style={[s.rowText, { color: dueTime ? theme.text : theme.textDim }]}>
+                            {dueTime || 'Add time'}
+                        </Text>
+                        {dueTime && (
+                            <TouchableOpacity onPress={() => setDueTime(undefined)}>
+                                <Ionicons name="close-circle" size={16} color={theme.textDim} />
+                            </TouchableOpacity>
+                        )}
+                    </TouchableOpacity>
+                    {timePicker && (
+                        <View>
+                            <TouchableOpacity
+                                style={{ alignItems: 'flex-end', paddingRight: 16, paddingVertical: 8 }}
+                                onPress={() => setTimePicker(false)}
+                            >
+                                <Text style={{ color: theme.accent, fontWeight: '600', fontSize: 16 }}>Done</Text>
+                            </TouchableOpacity>
+                            <DateTimePicker
+                                value={dueTime ? new Date(`2000-01-01T${dueTime}`) : new Date()}
+                                mode="time"
+                                display="spinner"
+                                onChange={(event, date) => {
+                                    if (date) {
+                                        const h = date.getHours().toString().padStart(2, '0');
+                                        const m = date.getMinutes().toString().padStart(2, '0');
+                                        setDueTime(`${h}:${m}`);
+                                    }
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {/* Reminder Toggle */}
+                    <TouchableOpacity
+                        style={[s.row, reminder && { backgroundColor: theme.blue + '22' }]}
+                        onPress={() => setReminder(prev => !prev)}
+                    >
+                        <Ionicons name="notifications-outline" size={20} color={reminder ? theme.blue : theme.textDim} />
+                        <Text style={[s.rowText, { color: reminder ? theme.blue : theme.textDim }]}>
+                            {reminder ? 'Reminder on (15 min before)' : 'Remind me'}
+                        </Text>
+                        {reminder && <Ionicons name="checkmark" size={16} color={theme.blue} />}
+                    </TouchableOpacity>
 
                     {/* Priority */}
                     <View style={s.row}>
@@ -174,7 +263,6 @@ export default function TaskDetailSheet({ task, visible, onClose, onUpdate }: Pr
                             placeholderTextColor={theme.textDim}
                             value={notes}
                             onChangeText={setNotes}
-                            onBlur={handleSave}
                             multiline
                         />
                     </View>
@@ -212,6 +300,12 @@ const styles = (theme: any) => StyleSheet.create({
         alignSelf: 'center',
         marginVertical: 12,
     },
+    sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+},
     titleInput: {
         fontSize: 20,
         fontWeight: '600',
