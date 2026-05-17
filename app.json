@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Daust Logistic Platform",
+    "slug": "daust-logistic-platform",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#3B82F6"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need camera access to scan barcodes on equipment and facilities."
+      }
+    },
+    "android": {
+      "package": "com.daust.logisticplatform",
+      "adaptiveIcon": {
+        "backgroundColor": "#3B82F6"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Daust Logistic Platform to access your camera to scan barcodes."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4816abf5-c751-4008-9da2-6a6c004111ea"
+      }
+    }
+  }
+}
