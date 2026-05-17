@@ -8,6 +8,8 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#3B82F6"
     },
     "ios": {
@@ -19,6 +21,7 @@
     "android": {
       "package": "com.daust.logisticplatform",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#3B82F6"
       },
       "permissions": [
