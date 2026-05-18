@@ -32,8 +32,6 @@ Scan the QR code with Expo Go on your phone. The Convex backend is already deplo
 | STU-001 | student123 | Student |
 | FAC-001 | faculty123 | Faculty |
 
-On first use, log in as ADMIN-001 and go to the Admin tab to tap **Seed Test Data** to populate equipment and facilities.
-
 ## Screens
 
 ### Login
