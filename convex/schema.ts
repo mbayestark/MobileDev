@@ -32,6 +32,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
     notes: v.optional(v.string()),
+    pushToken: v.optional(v.string()),
   }).index("by_studentId", ["studentId"]),
 
   items: defineTable({

@@ -153,7 +153,33 @@ export const updateStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const booking = await ctx.db.get(args.bookingId);
     await ctx.db.patch(args.bookingId, { status: args.status });
+
+    if (booking && (args.status === "no_show" || args.status === "cancelled")) {
+      let resourceName = "your booking";
+      if (booking.itemId) {
+        const item = await ctx.db.get(booking.itemId);
+        resourceName = item?.name ?? "Unknown Item";
+      } else if (booking.facilityId) {
+        const facility = await ctx.db.get(booking.facilityId);
+        resourceName = facility?.name ?? "Unknown Facility";
+      }
+
+      const title = args.status === "no_show" ? "No-Show Recorded" : "Booking Cancelled";
+      const body = args.status === "no_show"
+        ? `You were marked as a no-show for "${resourceName}". Please check in on time for future bookings.`
+        : `Your booking for "${resourceName}" has been cancelled by an administrator.`;
+
+      await ctx.db.insert("notifications", {
+        userId: booking.userId,
+        title,
+        body,
+        type: "general",
+        isRead: false,
+        createdAt: Date.now(),
+      });
+    }
   },
 });
 
@@ -335,6 +361,25 @@ export const markOverdueAsNoShow = mutation({
     for (const booking of confirmed) {
       if (now > booking.startTime + fifteenMin && now > booking.endTime) {
         await ctx.db.patch(booking._id, { status: "no_show" });
+
+        let resourceName = "your booking";
+        if (booking.itemId) {
+          const item = await ctx.db.get(booking.itemId);
+          resourceName = item?.name ?? "Unknown Item";
+        } else if (booking.facilityId) {
+          const facility = await ctx.db.get(booking.facilityId);
+          resourceName = facility?.name ?? "Unknown Facility";
+        }
+
+        await ctx.db.insert("notifications", {
+          userId: booking.userId,
+          title: "No-Show Recorded",
+          body: `You were marked as a no-show for "${resourceName}". Please check in on time for future bookings.`,
+          type: "general",
+          isRead: false,
+          createdAt: Date.now(),
+        });
+
         marked++;
       }
     }

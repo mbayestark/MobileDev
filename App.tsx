@@ -4,10 +4,11 @@ import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexProvider, ConvexReactClient, useMutation } from "convex/react";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { registerForPushNotifications } from "./utils/notifications";
+import { api } from "./convex/_generated/api";
 
 import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
@@ -48,9 +49,6 @@ function MainTabs({
         tabBarStyle: {
           backgroundColor: "#fff",
           borderTopColor: "#E5E7EB",
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 4,
         },
         headerStyle: { backgroundColor: "#3B82F6" },
         headerTintColor: "#fff",
@@ -117,13 +115,22 @@ function MainTabs({
   );
 }
 
+function PushTokenSaver({ userId }: { userId: Id<"users"> }) {
+  const savePushToken = useMutation(api.users.savePushToken);
+  useEffect(() => {
+    registerForPushNotifications().then((token) => {
+      if (token) savePushToken({ userId, pushToken: token });
+    });
+  }, [userId]);
+  return null;
+}
+
 export default function App() {
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
-    registerForPushNotifications();
     AsyncStorage.multiGet(["userId", "isAdmin"]).then(
       ([storedId, storedAdmin]) => {
         if (storedId[1]) {
@@ -171,6 +178,7 @@ export default function App() {
 
   return (
     <ConvexProvider client={convex}>
+      {userId && <PushTokenSaver userId={userId} />}
       <NavigationContainer>
         <StatusBar style="light" />
         <Stack.Navigator

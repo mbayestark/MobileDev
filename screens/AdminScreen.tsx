@@ -9,7 +9,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../convex/_generated/api";
 import UserProfileModal from "../components/UserProfileModal";
@@ -90,7 +90,7 @@ export default function AdminScreen() {
   const seedData = useMutation(api.seed.seedData);
   const markNoShows = useMutation(api.bookings.markOverdueAsNoShow);
   const updateBookingStatus = useMutation(api.bookings.updateStatus);
-  const sendReminder = useMutation(api.notifications.sendReturnReminder);
+  const sendReminder = useAction(api.notifications.sendReturnReminder);
 
   const [seeding, setSeeding] = useState(false);
 

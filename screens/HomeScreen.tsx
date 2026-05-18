@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { RootStackParamList } from "../types";
 import NotificationsModal from "../components/NotificationsModal";
+import { sendInAppNotification } from "../utils/notifications";
 
 type Props = {
   userId: Id<"users">;
@@ -72,6 +73,17 @@ export default function HomeScreen({ userId }: Props) {
   const history = useQuery(api.scans.getUserHistory, { userId, limit: 5 });
   const facilities = useQuery(api.facilities.getAll);
   const unreadCount = useQuery(api.notifications.getUnreadCount, { userId });
+  const notifications = useQuery(api.notifications.getMyNotifications, { userId });
+
+  const prevUnreadRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (unreadCount === undefined) return;
+    if (prevUnreadRef.current !== undefined && unreadCount > prevUnreadRef.current && notifications?.[0]) {
+      const latest = notifications[0];
+      sendInAppNotification(latest.title, latest.body);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   if (!user) {
     return (

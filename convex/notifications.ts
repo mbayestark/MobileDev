@@ -1,7 +1,40 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
-export const sendReturnReminder = mutation({
+export const sendReturnReminder = action({
+  args: {
+    userId: v.id("users"),
+    itemName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(internal.notifications.createReminder, {
+      userId: args.userId,
+      itemName: args.itemName,
+    });
+
+    const user = await ctx.runQuery(internal.notifications.getUserPushToken, {
+      userId: args.userId,
+    });
+
+    if (user?.pushToken) {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: user.pushToken,
+          title: "Return Reminder",
+          body: `Please return "${args.itemName}" as soon as possible.`,
+          sound: "default",
+        }),
+      });
+    }
+  },
+});
+
+export const createReminder = internalMutation({
   args: {
     userId: v.id("users"),
     itemName: v.string(),
@@ -15,6 +48,14 @@ export const sendReturnReminder = mutation({
       isRead: false,
       createdAt: Date.now(),
     });
+  },
+});
+
+export const getUserPushToken = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    return user ? { pushToken: user.pushToken } : null;
   },
 });
 

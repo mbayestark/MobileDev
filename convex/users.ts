@@ -104,6 +104,16 @@ export const setAdmin = mutation({
   },
 });
 
+export const savePushToken = mutation({
+  args: {
+    userId: v.id("users"),
+    pushToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { pushToken: args.pushToken });
+  },
+});
+
 export const deactivateUser = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
